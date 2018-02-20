@@ -1,0 +1,116 @@
+$box: #f8f8f8;
+$background: #d3edbd;
+$names: #1c1b16;
+
+@mixin border-radius($radius) {
+  -webkit-border-radius: $radius;
+     -moz-border-radius: $radius;
+      -ms-border-radius: $radius;
+          border-radius: $radius;
+}
+
+body {
+  background: url("http://cdn.backgroundhost.com/backgrounds/subtlepatterns/blu_stripes.png");
+  margin-top: 20px;
+}
+
+button {
+  margin: 3px;
+}
+
+.btn-warning, .btn-warning:hover {
+  color: white;
+}
+
+.btn-warning:active {
+  color: white !important;
+}
+
+ul li {
+  font-size: 10pt;
+}
+
+.box {
+  background: $box;
+  border: 1px solid gray;
+  @include border-radius(4px);
+  margin-top: 50px;
+  margin-bottom: 20px;
+  padding: 20px 20px 40px 20px;
+}
+
+.container {
+  min-width: 180px;
+}
+
+.ingredientHeader {
+  font-weight: bold;
+  margin-top: 15px;
+}
+
+.inner {
+  background: white;
+  padding: 8px;
+}
+
+.names {
+  background: $background;
+  @include border-radius(3px); 
+  color: $names;
+  cursor: pointer;
+  font-size: 12pt;
+  margin: 1px 0px 1px 0px;
+  padding: 8px;
+  text-decoration: underline;
+}
+
+.recipesHeader {
+  color: $names;
+  font-family: "Rammetto One", cursive;
+  padding-bottom: 15px;
+}
+
+.align-right {
+  float: right;
+}
+
+/* Show/hide
+with dynamically created height */
+
+.panel {
+  .panel-collapse {
+    overflow: hidden;
+    transition: height 0.4s ease-out;
+  }
+}
+
+.popup {
+  background: rgba(0, 0, 0, 0.5);
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  margin: auto;
+  width: 100%;
+  height: 100%;
+}
+
+.popup-inner {
+  background: white;
+  padding: 20px;
+  position: fixed;
+  left: 25%;
+  right: 25%;
+  top: 25%;
+}
+
+.undo {
+  position: fixed;
+  left: 40%;
+  right: 40%;
+  top: 5%;
+  .undo-inner {
+    transition: opacity 2.0s ease-out;
+  }
+}

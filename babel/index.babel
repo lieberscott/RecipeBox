@@ -1,0 +1,571 @@
+// React & Redux libraries setup
+const { Component } = React;
+const { createStore, applyMiddleware } = Redux;
+const { Provider } = ReactRedux;
+const { connect } = ReactRedux;
+const { combineReducers } = Redux;
+
+let initState;
+
+if (JSON.parse(localStorage.getItem("rritems")) === null) {
+  initState = {
+    popup: false,
+    editing: false,
+    undo: false,
+    items: [
+      { name: "Tofu tacos", ingredients: ["Shells", "600mg tofu", "1/8 oz shredded mozzarella cheese", "1 head of lettuce", "1 tsp. chili powder", "1/2 tsp. paprika", "1 tsp. oregano", "2 tsp. chopped onion", "1 tsp. cumin", "1 tsp. salt", "1 tsp. black pepper"] },
+      { name: "Banana Smoothie", ingredients: ["2 bananas", "1/2 cup vanilla yogurt", "1/2 cup skim milk", "2 teaspoons honey", "pinch of cinnamon"] },
+      { name: "Holy Guacamole", ingredients: ["2 ripe avocados", "1/2 teaspoon Kosher salt", "1 Tbsp of fresh lime juice or lemon juice", "2 Tbsp to 1/4 cup of minced red onion or thinly sliced green onion", "1-2 minced serrano chiles (stems and seeds removed)", "2 tbsps. cilantro (leaves and tender stems) finely chopped", "A dash of freshly grated black pepper", "1/2 ripe tomato (seeds and pulp removed) chopped"] },
+      { name: "PB&J", ingredients: ["Peanut butter", "Jelly", "Bread"] }
+    ]
+  };
+}
+else {
+  initState = JSON.parse(localStorage.getItem("rritems"));
+}
+
+const reducer = (state = initState, action) => {
+  let newState;
+  switch (action.type) {
+    default:
+      return state;
+    case "ADD":
+      newState = {
+        ...state,
+        items: [...state.items, {
+          name: action.food,
+          ingredients: action.ingredients
+        }],
+        prevArray: [...state.items]
+      }
+      localStorage.setItem("rritems", JSON.stringify(newState));
+      return newState;
+      break;
+      
+    case "POPUP":
+      newState = { ...state }
+      newState.popup = !newState.popup;
+      return newState;
+      break;
+      
+    case "UNDO_STATUS":
+      newState = { ...state }
+      newState.undo = action.payload;
+      localStorage.setItem("rritems", JSON.stringify(newState));
+      return newState;
+      break;
+      
+    case "DELETE":
+      let oldarr = [ ...state.items ];
+      let newarr = state.items;
+      newarr.splice(action.index, 1);
+      newState = {
+        ...state,
+        items: newarr,
+        prevArray: oldarr // maintain copy of previous items
+      };
+      localStorage.setItem("rritems", JSON.stringify(newState));
+      return newState;
+      break;
+      
+    case "EDIT":
+      newState = {
+        ...state,
+      prevArray: [ ...state.items ]
+      };
+      newState.items[action.index] = {
+        name: action.food,
+        ingredients: action.ingredients
+      };
+      localStorage.setItem("rritems", JSON.stringify(newState));
+      return newState;
+      break;
+      
+    case "UNDO":
+      let prev = state.prevArray;
+      newState = {
+        ...state,
+        items: prev
+      }
+      localStorage.setItem("rritems", JSON.stringify(newState));
+      return newState;
+      break;
+  }
+}
+
+const store = createStore(reducer);
+
+/**********************
+/*
+/*
+/* Store and Reducer ^^^^^^^
+
+/* App
+/*
+/*
+/**********************/
+
+const App = (props) => { // app
+  return (
+    <div>
+      <Box />
+    </div>
+  );
+}
+
+/**********************
+/*
+/*
+/* App ^^^^^
+
+/* Recipe
+/*
+/*
+/**********************/
+
+class Recipe extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      expanded: false,
+      editing: false,
+      height: 10
+    };
+    this.x;
+    
+    this.toggleCollapse = this.toggleCollapse.bind(this);
+    this.toggleEditing = this.toggleEditing.bind(this);
+    this.deletePress = this.deletePress.bind(this);
+  }
+  
+  toggleCollapse(e) {
+    if (e) {
+      e.preventDefault();
+    };
+    this.setState({ expanded: !this.state.expanded, height: this.refs.inner.clientHeight });
+  }
+  
+  toggleEditing(e) {
+    if (e) {
+      e.preventDefault();
+    };
+    this.setState({ editing: !this.state.editing });
+  }
+  
+  deletePress() {
+    this.toggleCollapse();
+    this.props.undoStatus(true);
+    this.props.deleteItem(this.props.index);
+    
+    setTimeout(() => this.props.undoStatus(false), 5000); // if undo is not clicked, button disappears after 5 seconds
+  }
+  
+  render() {
+    // + 15 because otherwise buttons are cut off for some reason
+    const currentHeight = this.state.expanded ? this.state.height + 15 : 0;
+    
+    const ingredients = this.props.ingredients.map(ingredient => {
+      return (
+          <li className="list-group-item">
+            {ingredient}
+          </li>
+        );
+    });
+        
+    return (
+      <div className="panel">
+        <div className="names" onClick={(e) => this.toggleCollapse(e)}>{this.props.name}</div>
+        <div className="panel-collapse" style={{height: currentHeight + "px"}}>
+          <div className="inner" ref="inner">
+            <div className="ingredientHeader align-baseline text-center">Ingredients</div>
+            <hr/>
+            <ul className="list-group">
+              {ingredients}
+            </ul>
+            <br/>
+            <button type="button" className="btn btn-sm btn-info" onClick={this.toggleEditing}>Edit</button>
+            <button type="button" className="btn btn-sm btn-danger" onClick={this.deletePress}>Delete</button>
+            {this.state.editing ? <Editpopup toggleCollapse={this.toggleCollapse} toggleEditing={this.toggleEditing} index={this.props.index}/> : null}
+            {this.props.data.undo ? <Undo /> : null}
+          </div>
+        </div>
+      </div>
+    );
+  } 
+}
+
+const mapStateToPropsRec = (state) => {
+  return {
+    data: state
+  };
+};
+
+const mapDispatchToPropsRec = (dispatch) => {
+  return {
+    togglePopup: () => {
+      dispatch(setName());
+    },
+    deleteItem: (index) => {
+      dispatch(deleteItem(index));
+    },
+    undoStatus: (status) => {
+      dispatch(undoStatus(status));
+    }
+  };
+}
+
+function deleteItem(index) {
+  return {
+    type: "DELETE",
+    index: index
+  };
+}
+
+Recipe = connect(mapStateToPropsRec, mapDispatchToPropsRec)(Recipe); // use same name as class apparently?
+
+/**********************
+/*
+/*
+/* Recipe ^^^^^^^^
+
+/* Undo
+/*
+/*
+/**********************/
+
+
+class Undo extends React.Component {
+  constructor(props) {
+    super(props);
+  }
+  
+  render() {
+    return (
+      <div className="undo">
+        <button className="btn btn-warning btn-block" onClick={() => this.props.undo(false)}>
+          Undo?
+        </button>
+      </div>
+    );
+  }
+}
+
+const mapStateToPropsUndo = (state) => {
+  return {
+    data: state
+  };
+};
+
+const mapDispatchToPropsUndo = (dispatch) => {
+  return {
+    undo: (status) => {
+      dispatch(undo());
+      dispatch(undoStatus(status))
+    },
+    undoStatus: (status) => {
+      dispatch(undoStatus(status));
+    }
+  };
+}
+
+function undo() {
+  return {
+    type: "UNDO"
+  };
+}
+
+function undoStatus(status) {
+  return {
+    type: "UNDO_STATUS",
+    payload: status
+  };
+}
+
+Undo = connect(mapStateToPropsUndo, mapDispatchToPropsUndo)(Undo); // use same name as class apparently?
+
+/**********************
+/*
+/*
+/* Undo ^^^^^^^^
+
+/* Editpopup
+/*
+/*
+/**********************/
+
+class Editpopup extends React.Component { // editpopup
+  constructor(props) {
+    super(props);
+    this.state = {
+      food: this.props.data.items[this.props.index].name,
+      ingstring: this.props.data.items[this.props.index].ingredients.join(","),
+      ingarray: this.props.data.items[this.props.index].ingredients
+    };
+    this.changeFood = this.changeFood.bind(this);
+    this.changeIng = this.changeIng.bind(this);
+    this.editClick = this.editClick.bind(this);
+
+  }
+  
+  changeFood(e) { // change food onChange
+    this.setState({ food: e.target.value });
+  }
+  
+  changeIng(e) { // change ingstring and ingarray onChange
+    let ingstr = e.target.value;
+    let ingarr = ingstr.split(",");
+    this.setState({ ingstring: ingstr, ingarray: ingarr });
+  }
+  
+  editClick() {
+    this.props.editItem(this.state.food, this.state.ingarray, this.props.index);
+    this.props.undoStatus(true);
+    this.props.toggleCollapse();
+    this.props.toggleEditing();
+    
+    setTimeout(() => this.props.undoStatus(false), 5000); // if undo is not clicked, button disappears after 3 seconds
+  }
+  
+  render() {
+    
+    let food = this.props.data.items[this.props.index].name;
+    let ingredients = this.props.data.items[this.props.index].ingredients;
+    
+    return (
+      <div className="popup">
+        <div className="popup-inner">
+          <div className="form-group">
+            <label for="rec">Recipe:</label>
+            <input type="text" className="form-control" defaultValue={food} id="rec" onChange={this.changeFood}></input>
+          </div>
+          <div className="form-group">
+            <label for="ing">Ingredients:</label>
+            <input type="text" className="form-control" defaultValue={ingredients} id="ing" onChange={this.changeIng}></input>
+          </div>
+          <button className="btn btn-outline-secondary align-right" onClick={this.props.toggleEditing}>Close me</button>
+          <button className="btn btn-primary align-right" onClick={this.editClick}>Edit</button>
+        </div>
+      </div>
+    );
+  }
+}
+
+const mapStateToPropsEdPop = (state) => {
+  return {
+    data: state
+  };
+};
+
+const mapDispatchToPropsEdPop = (dispatch) => {
+  return {
+    editItem: (food, ingredients, index) => {
+      dispatch(editItem(food, ingredients, index));
+    },
+    undoStatus: (status) => {
+      dispatch(undoStatus(status));
+    }
+  }
+};
+
+function editItem(food, ingredients, index) {
+  if (food != "") {
+    return {
+      type: "EDIT",
+      food: food,
+      ingredients: ingredients,
+      index: index
+    };
+  }
+} 
+
+Editpopup = connect(mapStateToPropsEdPop, mapDispatchToPropsEdPop)(Editpopup); // use same name as class apparently?
+
+/**********************
+/*
+/*
+/* Editpopup ^^^^^^^^^^^
+
+/* Mainbutton
+/*
+/*
+/**********************/
+
+class Mainbutton extends React.Component { // mainbutton
+  render() {
+    return (
+      <button className="btn btn-lg btn-primary" onClick={this.props.togglePopup}>Add Recipe</button>
+    );
+  }
+}
+
+/**********************
+/*
+/*
+/* Mainbutton ^^^^^^^^^^
+
+/* Addpopup
+/*
+/*
+/**********************/
+
+class Addpopup extends React.Component { // addpopup
+  constructor(props) {
+    super(props);
+    this.state = {
+      food: "", // food will be passed up to Box component in addRec()
+      ingstring: "", // ingredient string every time keystroke is pressed
+      ingarray: [] // ingredient array (from string) will be passed up to Box component in addRec()
+    };
+    this.changeFood = this.changeFood.bind(this);
+    this.changeIng = this.changeIng.bind(this);
+  }
+  
+  changeFood(e) { // change food onChange
+    this.setState({ food: e.target.value });
+  }
+  
+  changeIng(e) { // change ingredients onChange
+    let ingstr = e.target.value;
+    let ingarr = ingstr.split(",");
+    this.setState({ ingstring: ingstr, ingarray: ingarr });
+  }
+  
+  render() {
+    return (
+      <div className="popup">
+        <div className="popup-inner">
+          <div className="form-group">
+            <label for="rec">Recipe:</label>
+            <input type="text" className="form-control" placeholder="Recipe name" id="rec" onChange={this.changeFood}></input>
+          </div>
+          <div className="form-group">
+            <label for="ing">Ingredients:</label>
+            <input type="text" className="form-control" placeholder="Ingredients (seperated by commas)" id="ing" onChange={this.changeIng}></input>
+          </div>
+          <button className="btn btn-outline-secondary align-right" onClick={this.props.togglePopup}>Close</button>
+          <button className="btn btn-primary align-right" onClick={() => this.props.addItem(this.state.food, this.state.ingarray)}>Add recipe</button>
+        </div>
+      </div>
+    );
+  }
+}
+
+
+const mapStateToPropsAddPop = (state) => {
+  return {
+    data: state
+  };
+};
+
+const mapDispatchToPropsAddPop = (dispatch) => {
+  return {
+    togglePopup: () => {
+      dispatch(togglePopup());
+    },
+    addItem: (food, ingredients) => {
+      dispatch(addItem(food, ingredients));
+      dispatch(togglePopup());
+    }
+  }
+};
+
+function addItem(food, ingredients) {
+  if (food != "") {
+    return {
+      type: "ADD",
+      food: food,
+      ingredients: ingredients
+    };
+  };
+}
+
+Addpopup = connect(mapStateToPropsAddPop, mapDispatchToPropsAddPop)(Addpopup); // use same name as class apparently?
+
+/**********************
+/*
+/*
+/* Addpopup ^^^^^^^^^^^
+
+/* Box
+/*
+/*
+/**********************/
+
+class Box extends React.Component { // box
+  constructor(props) {
+    super(props);
+  }
+  
+  render() {
+    const items = this.props.data.items.map((item, index) => {
+      return (
+        <div>
+          <Recipe name={item.name} ingredients={item.ingredients} index={index} />
+        </div>
+      );
+    })
+    return (
+      <div>
+        <div className="box">
+          <Headline />
+          {items}
+          {this.props.data.popup ? <Addpopup addRecipe={this.addRecipe} closeMe={this.props.togglePopup} /> : null}
+        </div>
+        <Mainbutton togglePopup={this.props.togglePopup}/>
+      </div>
+    );
+  }
+}
+
+const mapStateToPropsBox = (state) => {
+  return {
+    data: state
+  };
+};
+
+const mapDispatchToPropsBox = (dispatch) => {
+  return {
+    togglePopup: () => {
+      dispatch(togglePopup());
+    },
+    deleteItem: (index) => {
+      dispatch(deleteItem(index));
+    }
+  }
+};
+
+function togglePopup() {
+  return {
+    type: "POPUP"
+  };
+}
+
+Box = connect(mapStateToPropsBox, mapDispatchToPropsBox)(Box); // use same name as class apparently?
+
+/**********************
+/*
+/*
+/* Box ^^^^^^^^^^^
+
+/* Headline
+/*
+/*
+/**********************/
+
+const Headline = (props) => { // headline
+  return (
+    <h1 className="text-center recipesHeader">
+      <i className="fas fa-utensils"></i>
+        &nbsp; Recipe Box
+    </h1>
+  );
+}
+
+const main = window.document.getElementById("main");
+
+// Provider wraps our app
+ReactDOM.render(
+  <Provider store={store}>
+    <App />
+  </Provider>,
+  main);
